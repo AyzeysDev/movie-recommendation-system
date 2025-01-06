@@ -4,30 +4,45 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class ConnectionFactory {
     private static final String DB_URL = "jdbc:sqlite:movie_db.sqlite";
 
-    static {
-        try {
-            // Ensure the SQLite driver is loaded
-            Class.forName("org.sqlite.JDBC");
+    private static boolean initialized = false;
 
-            // Check if the database file exists, create if not
+    public static Connection getConnection() throws SQLException {
+        if (!initialized) {
+            initializeSchema();
+            initialized = true;
+        }
+        return DriverManager.getConnection(DB_URL);
+    }
+
+    private static void initializeSchema() {
+        try {
             File dbFile = new File("movie_db.sqlite");
             if (!dbFile.exists()) {
                 System.out.println("Database file not found. Creating a new database file.");
-                Connection connection = DriverManager.getConnection(DB_URL);
-                connection.close();
+                try (Connection connection = DriverManager.getConnection(DB_URL);
+                     Statement statement = connection.createStatement()) {
+
+                    // Schema creation
+                    String createTableSQL = """
+                        CREATE TABLE IF NOT EXISTS movies (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            title TEXT NOT NULL,
+                            genre TEXT NOT NULL,
+                            actor TEXT NOT NULL
+                        );
+                        """;
+                    statement.execute(createTableSQL);
+                    System.out.println("Table 'movies' created successfully.");
+                }
             }
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to load SQLite driver.", e);
         } catch (SQLException e) {
             throw new RuntimeException("Error initializing the database.", e);
         }
     }
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL);
-    }
 }
