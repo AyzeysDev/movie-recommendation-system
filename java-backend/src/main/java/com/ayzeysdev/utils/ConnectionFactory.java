@@ -1,36 +1,33 @@
 package com.ayzeysdev.utils;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 
 public class ConnectionFactory {
-    private static final String PROPERTIES_FILE = "application.properties";
-    private static String url;
-    private static String user;
-    private static String password;
+    private static final String DB_URL = "jdbc:sqlite:movie_db.sqlite";
 
     static {
-        try (InputStream input = ConnectionFactory.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
-            if (input == null) {
-                throw new IOException("Configuration file not found: " + PROPERTIES_FILE);
+        try {
+            // Ensure the SQLite driver is loaded
+            Class.forName("org.sqlite.JDBC");
+
+            // Check if the database file exists, create if not
+            File dbFile = new File("movie_db.sqlite");
+            if (!dbFile.exists()) {
+                System.out.println("Database file not found. Creating a new database file.");
+                Connection connection = DriverManager.getConnection(DB_URL);
+                connection.close();
             }
-
-            Properties properties = new Properties();
-            properties.load(input);
-
-            url = properties.getProperty("database.url");
-            user = properties.getProperty("database.user");
-            password = properties.getProperty("database.password");
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load database configuration.", e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Failed to load SQLite driver.", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error initializing the database.", e);
         }
     }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
+        return DriverManager.getConnection(DB_URL);
     }
 }
